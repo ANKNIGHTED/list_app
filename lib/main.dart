@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:list_app/cubit/food_cubit.dart';
+import 'package:list_app/cubit/recipe_cubit.dart';
 import 'package:list_app/data/repositories/food_repository.dart';
+import 'package:list_app/data/repositories/recipe_repository.dart';
+
 import 'package:list_app/pages/home.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -13,17 +16,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<FoodCubit>(
-      create: (context) => FoodCubit(FoodRepository()),
-      child: MaterialApp(
-        home: BlocBuilder<FoodCubit, FoodState>(
-          builder: (context, state) {
-            return Home();
-          },
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<FoodCubit>(
+          create: (context) => FoodCubit(FoodRepository()),
         ),
+        BlocProvider<RecipeCubit>(
+          create: (context) => RecipeCubit(RecipeRepository()),
+        ),
+      ],
 
-        debugShowCheckedModeBanner: false,
-      ),
+      child: MaterialApp(home: Home(), debugShowCheckedModeBanner: false),
     );
   }
 }

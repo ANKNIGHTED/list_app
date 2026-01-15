@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
 import 'package:list_app/cubit/food_cubit.dart';
-import 'package:list_app/data/model/food.dart';
-import 'package:list_app/data/repositories/food_repository.dart';
+import 'package:list_app/cubit/recipe_cubit.dart';
+import 'package:list_app/pages/food_details_page.dart';
 import 'package:list_app/util/foodtile.dart';
 
 class Home extends StatefulWidget {
@@ -15,63 +14,49 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      final cubit = context.read<FoodCubit>();
-      cubit.getFood("");
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Menu')),
+      appBar: AppBar(
+        title: const Text('Menu'),
+        leading: IconButton(
+          onPressed: () {
+            context.read<FoodCubit>().clearSearch();
+          },
+          icon: Icon(Icons.refresh),
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: BlocBuilder<FoodCubit, FoodState>(
           builder: (context, state) {
             if (state is FoodInitial) {
-              return buildInitialInput();
+              return FoodInputField();
             } else if (state is FoodLoading) {
-              return buildLoading();
+              return Center(child: CircularProgressIndicator());
             } else if (state is FoodLoaded) {
-              final foods = state.food;
               return ListView.builder(
-                itemCount: 6,
+                itemCount: state.food.length,
                 itemBuilder: (context, index) {
-                  final food = foods[index];
-                  return FoodTile(food: food);
+                  final food = state.food[index];
+                  return GestureDetector(
+                    onTap: () {
+                      context.read<RecipeCubit>().fetchDetails(food.id);
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const FoodDetailsPage(),
+                        ),
+                      );
+                    },
+                    child: FoodTile(food: food),
+                  );
                 },
               );
             } else if (state is FoodError) {
               return Center(child: Text(state.message));
             } else {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FoodInputField(),
-                  //search bar
-                  SizedBox(height: 16.0),
-                  Text(
-                    'Popular Food',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 16.0),
-
-                  //menu list
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: 6,
-                      itemBuilder: (context, index) {
-                        return FoodTile(
-                          food: FoodRepository().fetchFood() as Food,
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              );
+              return FoodInputField();
             }
           },
         ),
@@ -85,40 +70,18 @@ class FoodInputField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      decoration: InputDecoration(
-        hintText: 'Search',
-        prefixIcon: Icon(Icons.search),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+    return Center(
+      child: TextField(
+        decoration: InputDecoration(
+          hintText: 'Search',
+          prefixIcon: Icon(Icons.search),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+        ),
+        onSubmitted: (value) {
+          context.read<FoodCubit>().getFood(value);
+        },
+        textInputAction: TextInputAction.search,
       ),
-      onSubmitted: (value) => submitFood(context, value),
-      textInputAction: TextInputAction.search,
     );
   }
-}
-
-Widget buildInitialInput() {
-  return Center(child: FoodInputField());
-}
-
-Widget buildLoading() {
-  return Center(child: CircularProgressIndicator());
-}
-
-Column buildColumnWithData(Food food) {
-  return Column(
-    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    children: [
-      Text(
-        food.title,
-        style: TextStyle(fontSize: 40, fontWeight: FontWeight.w700),
-      ),
-      Text("ID ${food.id}", style: TextStyle(fontSize: 30)),
-    ],
-  );
-}
-
-void submitFood(BuildContext context, String name) {
-  final foodCubit = context.read<FoodCubit>();
-  foodCubit.getFood(name);
 }
